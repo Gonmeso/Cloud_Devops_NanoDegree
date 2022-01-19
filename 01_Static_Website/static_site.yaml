@@ -26,6 +26,35 @@ Resources:
                 - !Ref S3Bucket
                 - /*
       Bucket: !Ref S3Bucket
+  # Got this from AWS official snippets https://docs.aws.amazon.com/es_es/AWSCloudFormation/latest/UserGuide/quickref-cloudfront.html
+  myDistribution:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Origins:
+        - DomainName: !Join
+          - ''
+          - - !Ref S3Bucket
+            - .s3-website-
+            - !Ref "AWS::Region"
+            - .amazonaws.com
+          Id: myCustomOrigin
+          CustomOriginConfig:
+            HTTPPort: '80'
+            HTTPSPort: '443'
+            OriginProtocolPolicy: http-only
+          OriginShield:
+            Enabled: true
+            OriginShieldRegion: !Ref "AWS::Region"
+        DefaultCacheBehavior:
+          AllowedMethods: 
+            - GET
+            - HEAD
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          TargetOriginId: myCustomOrigin
+          ViewerProtocolPolicy: redirect-to-https
+        Enabled: true
 Outputs:
   WebsiteURL:
     Value: !GetAtt 
@@ -45,3 +74,7 @@ Outputs:
       - ''
       - - 's3://'
         - !Ref S3Bucket
+  CFURL:
+    Value: !GetAtt
+      - myDistribution
+      - DomainName
