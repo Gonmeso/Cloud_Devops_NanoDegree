@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Resources:
+  # Got this from AWS official snippets https://docs.aws.amazon.com/es_es/AWSCloudFormation/latest/UserGuide/quickref-s3.html
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
