@@ -1,56 +1,52 @@
 
-# Project Title
+# Deploy Static Websito to AWS using S3 and CloudFront
 
-A brief description of what this project does and who it's for
-
-
-## Badges
-
-Add badges from somewhere like: [shields.io](https://shields.io/)
-
-[![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/tterb/atomic-design-ui/blob/master/LICENSEs)
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
-[![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
+This is a project regarding the first project of Udacity's Cloud DevOps Engineer Nanodegree Program.
 
 
 ## Run Locally
 
-Clone the project
+In order to deploy the website locally first clone the project
 
 ```bash
-  git clone https://link-to-project
+  git clone https://github.com/Gonmeso/Cloud_Devops_NanoDegree.git
 ```
 
-Go to the project directory
+Make sure you have AWS Cli installed
 
 ```bash
-  cd my-project
+  aws --version
 ```
 
-Install dependencies
+Configure the AWS Cli with you own credentials using
 
 ```bash
-  npm install
+  aws configure --profile udacity ...
 ```
 
-Start the server
+Deploy the website using the cloudformation template
 
 ```bash
-  npm run start
+  ./deploy_site.sh
+```
+
+Wait until done and visit the CloudFront or bucket domain 
+
+```
+s3 URL: http://static-site-with-cdn-s3bucket-11whvn8bj6zaq.s3-website-eu-west-1.amazonaws.com
+Cloudfront URL: d3e8ozxcvjgw86.cloudfront.net
 ```
 
 
 ## Authors
 
-- [@katherinepeterson](https://www.github.com/octokatherine)
+- [@gonmeso](https://www.github.com/gonmeso)
 
 
 ## Acknowledgements
 
- - [Awesome Readme Templates](https://awesomeopensource.com/project/elangosundar/awesome-README-templates)
- - [Awesome README](https://github.com/matiassingers/awesome-readme)
- - [How to write a Good readme](https://bulldogjob.com/news/449-how-to-write-a-good-readme-for-your-github-project)
+I want to thank Udacity for this project and the resources provided.
 
 
-![Logo](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/th5xamgrr6se0x5ro4g6.png)
+![Logo](https://www.udacity.com/images/svgs/udacity-tt-logo.svg)
 
