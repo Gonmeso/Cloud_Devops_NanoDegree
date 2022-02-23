@@ -1,0 +1,148 @@
+Parameters:
+  # Paramenters are entirely optional.
+  # but using them will make your cloudformation templates more reusable
+  # use them for things that may change over time, such as instance type,
+  # VPCs and so on.
+  VPCCIDR:
+    Type: String
+  PrivSubnetCIDR:
+    Type: String
+  PubSubnetCIDR:
+    Type: String
+Resources:
+  # instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
+  # never give too much permissions to your EC2 instances! if they get hacked, the permissions get hacked also!
+  # in this example, I create a Role called UdacityS3ReadOnlyC2 and just give it a policy of S3 Read-Only Access
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - UdacityS3ReadOnlyEC2
+
+  # ----------- VPC and SUBNETS -----------
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCIDR
+      Tags:
+        - Key: Name
+          Value: "Udagram VPC"
+
+  InternetGateWay:
+    Type: AWS::EC2::InternetGateway
+
+  IGAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateWay
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      # Availability zone at your discretion or
+      # as a parameter
+      AvailabilityZone: "eu-west-1a"
+      CidrBlock: !Ref PubSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: "Public Subnet 1"
+      VpcId: !Ref VPC
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "eu-west-1b"
+      CidrBlock: !Ref PrivSubnetCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Private Subnet 1"
+      VpcId: !Ref VPC
+
+# ----------- NAT Gateway -----------
+  NATGateWay:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - EIP
+          - AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: "NAT to be used by servers in the private subnet"
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "Elastic IP for our NAT Gateway"
+
+# ----------- ROUTES -----------
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "Private Route Table"
+      VpcId: !Ref VPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "Public Route Table"
+      VpcId: !Ref VPC
+
+  AssociatePUBRT:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  AssociatePRIVRT:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+
+  PublicInternetRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateWay
+
+  PrivateInternetOutboundRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateWay
+# Outputs:
+# This is also optional.
+# Bonus points for useful outputs!
+# for example, if you create a Load Balancer
+# it's nice to output the URL to it here, so that we don't have to go to the console to get it.
+
+# Sample UserData
+# When creating your Launch Configuration, you may need a UserData script
+# here's one that you can use for Ubuntu Linux that will:
+# Install Apache Web Server, Start it, and create an index.html that will be displayed
+# when you visit the IP address of this server with your web browser
+#Here it is:
+#
+#          #!/bin/bash
+#          apt-get update -y
+#          apt-get install apache2 -y
+#          systemctl start apache2.service
+#          cd /var/www/html
+#          echo "Udacity Demo Web Server Up and Running!" > index.html
