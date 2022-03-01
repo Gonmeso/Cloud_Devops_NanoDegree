@@ -1,0 +1,11 @@
+Resources:
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Name: UdagramELB
+      Subnets: 
+        - !ImportValue  PublicSubnetID1
+        - !ImportValue PublicSubnetID2
+      Tags: 
+        - Key: Name
+          Value: Udagrams Application Load Balancer

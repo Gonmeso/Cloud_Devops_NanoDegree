@@ -1,8 +1,4 @@
 Parameters:
-  # Paramenters are entirely optional.
-  # but using them will make your cloudformation templates more reusable
-  # use them for things that may change over time, such as instance type,
-  # VPCs and so on.
   VPCCIDR:
     Type: String
   PrivSubnet1CIDR:
@@ -14,9 +10,6 @@ Parameters:
   PubSubnet2CIDR:
     Type: String
 Resources:
-  # instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
-  # never give too much permissions to your EC2 instances! if they get hacked, the permissions get hacked also!
-  # in this example, I create a Role called UdacityS3ReadOnlyC2 and just give it a policy of S3 Read-Only Access
   # ProfileWithRolesForOurApp:
   #   Type: AWS::IAM::InstanceProfile
   #   Properties:
@@ -102,7 +95,7 @@ Resources:
       SubnetId: !Ref PublicSubnet1
       Tags:
         - Key: Name
-          Value: "NAT to be used by servers in the private subnet"
+          Value: "NAT to be used by servers in the private subnet 1"
 
   NATGateWay2:
     Type: AWS::EC2::NatGateway
@@ -114,7 +107,7 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       Tags:
         - Key: Name
-          Value: "NAT to be used by servers in the private subnet"
+          Value: "NAT to be used by servers in the private subnet 2"
 
   ElasticIP1:
     Type: AWS::EC2::EIP
@@ -137,7 +130,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: "Private Route Table"
+          Value: "Private Route Table 1"
       VpcId: !Ref VPC
 
   PrivateRouteTable2:
@@ -145,7 +138,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: "Private Route Table"
+          Value: "Private Route Table 2"
       VpcId: !Ref VPC
 
   PublicRouteTable:
@@ -206,7 +199,18 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         Ref: NATGateWay2
-# Outputs:
+
+Outputs:
+  PublicSubnetID1:
+    Description: Subnet 1 ID for the ELB association
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: PublicSubnetID1
+  PublicSubnetID2:
+    Description: Subnet 2 ID for the ELB association
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: PublicSubnetID2
 # This is also optional.
 # Bonus points for useful outputs!
 # for example, if you create a Load Balancer
