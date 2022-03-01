@@ -5,9 +5,13 @@ Parameters:
   # VPCs and so on.
   VPCCIDR:
     Type: String
-  PrivSubnetCIDR:
+  PrivSubnet1CIDR:
     Type: String
-  PubSubnetCIDR:
+  PubSubnet1CIDR:
+    Type: String
+  PrivSubnet2CIDR:
+    Type: String
+  PubSubnet2CIDR:
     Type: String
 Resources:
   # instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
@@ -20,6 +24,7 @@ Resources:
   #       - UdacityS3ReadOnlyEC2
 
   # ----------- VPC and SUBNETS -----------
+  # HA implies using 2 AZs, for this we need 2 public subnets and 2 private subnets, one single IGW
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -43,7 +48,7 @@ Resources:
       # Availability zone at your discretion or
       # as a parameter
       AvailabilityZone: "eu-west-1a"
-      CidrBlock: !Ref PubSubnetCIDR
+      CidrBlock: !Ref PubSubnet1CIDR
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -54,35 +59,88 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone: "eu-west-1b"
-      CidrBlock: !Ref PrivSubnetCIDR
+      CidrBlock: !Ref PrivSubnet1CIDR
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
           Value: "Private Subnet 1"
       VpcId: !Ref VPC
 
-# ----------- NAT Gateway -----------
-  NATGateWay:
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      # Availability zone at your discretion or
+      # as a parameter
+      AvailabilityZone: "eu-west-1b"
+      CidrBlock: !Ref PubSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: "Public Subnet 2"
+      VpcId: !Ref VPC
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: "eu-west-1a"
+      CidrBlock: !Ref PrivSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: "Private Subnet 2"
+      VpcId: !Ref VPC
+
+  # ----------- NAT Gateway -----------
+  # For HA NAT we need to create one in each subnets, this also affects de ElasticIP
+  NATGateWay1:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId:
         Fn::GetAtt:
-          - ElasticIP
+          - ElasticIP1
           - AllocationId
       SubnetId: !Ref PublicSubnet1
       Tags:
         - Key: Name
           Value: "NAT to be used by servers in the private subnet"
 
-  ElasticIP:
+  NATGateWay2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - ElasticIP2
+          - AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: "NAT to be used by servers in the private subnet"
+
+  ElasticIP1:
     Type: AWS::EC2::EIP
     Properties:
       Tags:
         - Key: Name
-          Value: "Elastic IP for our NAT Gateway"
+          Value: "Elastic IP for our NAT Gateway in public subnet 1"
 
-# ----------- ROUTES -----------
-  PrivateRouteTable:
+  ElasticIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "Elastic IP for our NAT Gateway in public subnet 2"
+
+  # ----------- ROUTES -----------
+  # For AZ we need one route table fot the public and 2 for the private subnets as each one needs to use its own NATGateway
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "Private Route Table"
+      VpcId: !Ref VPC
+
+  PrivateRouteTable2:
     Type: AWS::EC2::RouteTable
     Properties:
       Tags:
@@ -98,17 +156,29 @@ Resources:
           Value: "Public Route Table"
       VpcId: !Ref VPC
 
-  AssociatePUBRT:
+  AssociatePUBRT1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1
 
-  AssociatePRIVRT:
+  AssociatePUBRT2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  AssociatePRIVRT1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
       SubnetId: !Ref PrivateSubnet1
+
+  AssociatePRIVRT2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
 
   PublicInternetRoute:
     Type: AWS::EC2::Route
@@ -119,14 +189,23 @@ Resources:
       GatewayId:
         Ref: InternetGateWay
 
-  PrivateInternetOutboundRoute:
+  PrivateInternetOutboundRoute1:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId:
-        Ref: PrivateRouteTable
+        Ref: PrivateRouteTable1
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
-        Ref: NATGateWay
+        Ref: NATGateWay1
+
+  PrivateInternetOutboundRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateWay2
 # Outputs:
 # This is also optional.
 # Bonus points for useful outputs!
