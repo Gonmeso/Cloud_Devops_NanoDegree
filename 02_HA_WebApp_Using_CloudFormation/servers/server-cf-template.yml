@@ -1,6 +1,6 @@
 Resources:
 
-  #  ----------- Elastic Load Balancer -----------
+  # ----------- Elastic Load Balancer -----------
   ALBSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -70,11 +70,103 @@ Resources:
       Name: "target-group-1"
       HealthCheckEnabled: true
 
+  # ----------- Role -----------
+
+  UdacityS3ReadOnlyEC2:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  # Instance profile for EC2 instances
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref UdacityS3ReadOnlyEC2
+
+  # ----------- Server -----------
+
+  ServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Server SG
+      GroupName: server-security-group
+      VpcId: !ImportValue UdagramVPC
+      SecurityGroupIngress:
+      - Description: Inbound rule to allow the Load Balancer.
+        IpProtocol: TCP
+        SourceSecurityGroupId: !Ref ALBSecurityGroup
+        FromPort: 80
+        ToPort: 80
+      - Description: Inbound rule to allow ssh from bastion.
+        IpProtocol: TCP
+        SourceSecurityGroupId: !Ref ALBSecurityGroup
+        FromPort: 22
+        ToPort: 22
+
+
+  Server:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-081ff4b9aa4e81a08 # https://cloud-images.ubuntu.com/locator/ec2/ ubuntu 20.04 LTS eu-west-1
+      InstanceType: t3.medium
+      IamInstanceProfile: !Ref ProfileWithRolesForOurApp
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdf"
+        Ebs:
+          VolumeSize: 10
+      SecurityGroups:
+        - !Ref ServerSG
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install unzip awscli -y
+          apt-get install apache2 -y
+          systemctl start apache2.service
+          cd /var/www/html
+          aws s3 cp s3://udagram-nd-bucket/index.html .
+
+  # ----------- AutoScaling -----------
+  ServerAutoscaling:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      MaxSize: 4
+      MinSize: 2
+      VPCZoneIdentifier:
+        - !ImportValue PrivateSubnetID1
+        - !ImportValue PrivateSubnetID2
+      LaunchConfigurationName: !Ref Server
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+
+  ScalingPolicyCPU:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ServerAutoscaling
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 80
+
 Outputs:
   ALBDNS:
     Description: DNS of the load balancer to acces Udagram
     Value: !Sub 
-      - 'http://${ALBDNS}'
+      - 'http://${ALBDNS}/index.html'
       - {ALBDNS: !GetAtt LoadBalancer.DNSName}
     Export:
       Name: Udagram-ALB
