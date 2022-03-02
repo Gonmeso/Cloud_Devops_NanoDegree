@@ -10,11 +10,6 @@ Parameters:
   PubSubnet2CIDR:
     Type: String
 Resources:
-  # ProfileWithRolesForOurApp:
-  #   Type: AWS::IAM::InstanceProfile
-  #   Properties:
-  #     Roles:
-  #       - UdacityS3ReadOnlyEC2
 
   # ----------- VPC and SUBNETS -----------
   # HA implies using 2 AZs, for this we need 2 public subnets and 2 private subnets, one single IGW
@@ -211,6 +206,16 @@ Outputs:
     Value: !Ref PublicSubnet2
     Export:
       Name: PublicSubnetID2
+  PrivateSubnetID1:
+    Description: Subnet 1 ID for the autoscaling group
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: PrivateSubnetID1
+  PrivateSubnetID2:
+    Description: Subnet 2 ID for the autoscaling group
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: PrivateSubnetID2
   UdagramVPC:
     Description: VPC of Udagram
     Value: !Ref VPC
