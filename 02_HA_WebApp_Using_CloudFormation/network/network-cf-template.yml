@@ -211,6 +211,11 @@ Outputs:
     Value: !Ref PublicSubnet2
     Export:
       Name: PublicSubnetID2
+  UdagramVPC:
+    Description: VPC of Udagram
+    Value: !Ref VPC
+    Export:
+      Name: UdagramVPC
 # This is also optional.
 # Bonus points for useful outputs!
 # for example, if you create a Load Balancer

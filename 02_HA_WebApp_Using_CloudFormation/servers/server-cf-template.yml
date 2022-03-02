@@ -1,4 +1,23 @@
 Resources:
+
+  #  ----------- Elastic Load Balancer -----------
+  ALBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "security group for ALB"
+      GroupName: "test-ALB-SG"
+      Tags: 
+        - 
+          Key: "Name"
+          Value: "ALB-SG"
+      VpcId: !ImportValue UdagramVPC
+      SecurityGroupIngress: 
+        - 
+          CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties: 
@@ -6,6 +25,56 @@ Resources:
       Subnets: 
         - !ImportValue  PublicSubnetID1
         - !ImportValue PublicSubnetID2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
       Tags: 
         - Key: Name
           Value: Udagrams Application Load Balancer
+
+  HTTPListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+      DefaultActions: 
+        - 
+          TargetGroupArn: !Ref ALBTargetGroup
+          Type: forward
+
+  ALBRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - TargetGroupArn: !Ref ALBTargetGroup
+        Type: forward
+      Conditions:
+      - Field: path-pattern
+        Values: [/]
+      ListenerArn: !Ref HTTPListener
+      Priority: 1
+
+  ALBTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/"
+      Port: 80
+      Protocol: "HTTP"
+      HealthCheckPort: "traffic-port"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      UnhealthyThresholdCount: 2
+      HealthyThresholdCount: 5
+      VpcId: !ImportValue UdagramVPC
+      Name: "target-group-1"
+      HealthCheckEnabled: true
+
+Outputs:
+  ALBDNS:
+    Description: DNS of the load balancer to acces Udagram
+    Value: !Sub 
+      - 'http://${ALBDNS}'
+      - {ALBDNS: !GetAtt LoadBalancer.DNSName}
+    Export:
+      Name: Udagram-ALB
