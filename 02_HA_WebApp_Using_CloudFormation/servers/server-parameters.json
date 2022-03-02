@@ -1,6 +1,10 @@
 [
 	{
-		"ParameterKey": "NetworkStack",
-		"ParameterValue": "network"
+		"ParameterKey": "HasBastion",
+		"ParameterValue": "false"
+	},
+	{
+		"ParameterKey": "Keypair",
+		"ParameterValue": ""
 	}
 ]
