@@ -1,7 +1,9 @@
 
-# Deploy Static Websito to AWS using S3 and CloudFront
+# Deploy a High Availability webserver in AWS
 
-This is a project regarding the first project of Udacity's Cloud DevOps Engineer Nanodegree Program.
+This is a project regarding the first project of Udacity's Cloud DevOps Engineer Nanodegree Program. The diagram used is the following:
+
+![diagram](Udagram.png)
 
 
 ## Run Locally
