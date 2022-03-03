@@ -156,8 +156,6 @@ Resources:
           systemctl start apache2.service
           cd /var/www/html
           aws s3 cp s3://udagram-nd-bucket/index.html .
-      # This keyname is conditional, if no bastion host is needed its empty
-      KeyName: !If [DeployBastion, !Ref Keypair,!Ref "AWS::NoValue"]
 
   # ----------- AutoScaling -----------
   ServerAutoscaling:
